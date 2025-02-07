@@ -14,6 +14,9 @@ class GameViewModel {
     var uiState by mutableStateOf(GameUiState(GameState.createInitialState()))
         private set
 
+    var cardAnimationState by mutableStateOf<CardAnimationState?>(null)
+        private set
+
     init {
         startTimer()
     }
@@ -66,9 +69,20 @@ class GameViewModel {
         // Add cards to target pile
         val newToPile = to.addCards(cardsToMove)
 
+        // If source is tableau pile and has a face-down top card after move, flip it
+        var finalFromPile = newFromPile
+        if (from.type == org.arhan.solitaire.model.Pile.Type.TABLEAU) {
+            newFromPile.topCard?.let { topCard ->
+                if (!topCard.faceUp) {
+                    finalFromPile = newFromPile.removeTopCard().second
+                        .addCard(topCard.copy(faceUp = true))
+                }
+            }
+        }
+
         // Update game state
         val newState = oldState
-            .updatePile(from, newFromPile)
+            .updatePile(from, finalFromPile)
             .updatePile(to, newToPile)
 
         uiState = uiState
@@ -83,32 +97,61 @@ class GameViewModel {
         }
     }
 
-    fun onStockClick() {
+    fun onStockClick(stockPosition: androidx.compose.ui.geometry.Offset, wastePosition: androidx.compose.ui.geometry.Offset) {
+        if (cardAnimationState?.isAnimating == true) return
+
         val oldState = uiState.gameState
         val stock = oldState.stock
         val waste = oldState.waste
 
-        if (stock.isEmpty) {
-            // If stock is empty, move all waste cards back to stock
-            uiState = uiState
-                .addToUndoStack(oldState)
-                .copy(gameState = GameLogic.cycleWasteToStock(oldState))
-                .incrementMoves()
+        if (stock.isEmpty && !waste.isEmpty) {
+            // If stock is empty and waste has cards, animate recycling
+            val topCard = waste.topCard!!
+            cardAnimationState = CardAnimationState().apply {
+                startAnimation(topCard.copy(faceUp = false), stockPosition)
+            }
+            coroutineScope.launch {
+                delay(750) // Wait for flip and movement animations
+                uiState = uiState
+                    .addToUndoStack(oldState)
+                    .copy(gameState = GameLogic.cycleWasteToStock(oldState))
+                    .incrementMoves()
+                cardAnimationState = null
+            }
             return
         }
 
-        // Draw top card from stock to waste
+        // Draw one card from stock to waste
+        drawFromStock(stockPosition, wastePosition)
+    }
+
+    private fun drawFromStock(stockPosition: androidx.compose.ui.geometry.Offset, wastePosition: androidx.compose.ui.geometry.Offset) {
+        val oldState = uiState.gameState
+        val stock = oldState.stock
+        val waste = oldState.waste
+
+        // Draw top card from stock and animate it
         val (card, newStock) = stock.removeTopCard()
-        val newWaste = waste.addCard(card.copy(faceUp = true))
 
-        val newState = oldState
-            .updatePile(stock, newStock)
-            .updatePile(waste, newWaste)
+        // Start with the card face down, it will flip during animation
+        cardAnimationState = CardAnimationState().apply {
+            startAnimation(card.copy(faceUp = false), wastePosition)
+        }
 
+        // Update the game state immediately to remove the card from stock
         uiState = uiState
             .addToUndoStack(oldState)
-            .copy(gameState = newState)
-            .incrementMoves()
+            .copy(gameState = oldState.updatePile(stock, newStock))
+
+        coroutineScope.launch {
+            delay(750) // Wait for flip and movement animations
+            // Add the card face up to waste pile
+            val newWaste = waste.addCard(card.copy(faceUp = true))
+            uiState = uiState.copy(
+                gameState = uiState.gameState.updatePile(waste, newWaste)
+            ).incrementMoves()
+            cardAnimationState = null
+        }
     }
 
     fun newGame() {

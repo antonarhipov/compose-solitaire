@@ -5,10 +5,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.dp
 import org.arhan.solitaire.model.Card
 import org.arhan.solitaire.model.Pile
@@ -37,47 +39,74 @@ fun FoundationPile(
 }
 
 @Composable
-fun StockPile(
-    pile: Pile,
-    onStockClick: () -> Unit,
+fun StockAndWastePiles(
+    stockPile: Pile,
+    wastePile: Pile,
+    onStockClick: (stockPosition: androidx.compose.ui.geometry.Offset, wastePosition: androidx.compose.ui.geometry.Offset) -> Unit,
+    onWasteCardDoubleClick: (Card) -> Unit,
+    cardAnimationState: CardAnimationState?,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .width(80.dp)
-            .height(120.dp)
-            .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
-            .clickable { onStockClick() }
-    ) {
-        pile.topCard?.let { card ->
-            CardView(
-                card = card,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
-    }
-}
+    var stockPosition by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var wastePosition by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
-@Composable
-fun WastePile(
-    pile: Pile,
-    onCardDoubleClick: (Card) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .width(80.dp)
-            .height(120.dp)
-            .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        pile.topCard?.let { card ->
-            CardView(
-                card = card,
-                onDoubleClick = { onCardDoubleClick(card) },
-                modifier = Modifier.align(Alignment.Center)
-            )
+        // Stock pile
+        Box(
+            modifier = Modifier
+                .width(80.dp)
+                .height(120.dp)
+                .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
+                .onGloballyPositioned { coordinates ->
+                    stockPosition = coordinates.positionInRoot()
+                }
+                .clickable { onStockClick(stockPosition, wastePosition) }
+        ) {
+            stockPile.topCard?.let { card ->
+                if (cardAnimationState?.animatingCard != card) {
+                    CardView(
+                        card = card,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+        }
+
+        // Waste pile
+        Box(
+            modifier = Modifier
+                .width(80.dp)
+                .height(120.dp)
+                .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
+                .onGloballyPositioned { coordinates ->
+                    wastePosition = coordinates.positionInRoot()
+                }
+        ) {
+            wastePile.topCard?.let { card ->
+                if (cardAnimationState?.animatingCard != card) {
+                    CardView(
+                        card = card,
+                        onDoubleClick = { onWasteCardDoubleClick(card) },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+
+            cardAnimationState?.let { state ->
+                if (state.isAnimating && state.animatingCard != null) {
+                    AnimatedCard(
+                        card = state.animatingCard!!,
+                        isFlipping = true,
+                        targetOffset = state.targetOffset,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
         }
     }
 }

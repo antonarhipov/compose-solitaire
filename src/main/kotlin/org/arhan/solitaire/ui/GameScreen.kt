@@ -1,11 +1,14 @@
 package org.arhan.solitaire.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlin.time.Duration
 
@@ -14,8 +17,25 @@ fun GameScreen(
     viewModel: GameViewModel,
     modifier: Modifier = Modifier
 ) {
+    val backgroundGradient = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF1B5E20), // Dark green
+            Color(0xFF2E7D32), // Forest green
+            Color(0xFF388E3C), // Medium green
+            Color(0xFF43A047), // Light green
+            Color(0xFF388E3C), // Medium green
+            Color(0xFF2E7D32), // Forest green
+            Color(0xFF1B5E20)  // Dark green
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
+    )
+
     Column(
-        modifier = modifier.fillMaxSize().padding(16.dp)
+        modifier = modifier
+            .fillMaxSize()
+            .background(brush = backgroundGradient)
+            .padding(16.dp)
     ) {
         // Top bar with controls and status
         Row(
@@ -42,8 +62,14 @@ fun GameScreen(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Moves: ${viewModel.uiState.moveCount}")
-                Text("Time: ${formatDuration(viewModel.uiState.elapsedTime)}")
+                Text(
+                    "Moves: ${viewModel.uiState.moveCount}",
+                    color = Color.White
+                )
+                Text(
+                    "Time: ${formatDuration(viewModel.uiState.elapsedTime)}",
+                    color = Color.White
+                )
             }
         }
 
@@ -55,18 +81,13 @@ fun GameScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             // Stock and waste area (top-left)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                StockPile(
-                    pile = viewModel.uiState.gameState.stock,
-                    onStockClick = viewModel::onStockClick
-                )
-                WastePile(
-                    pile = viewModel.uiState.gameState.waste,
-                    onCardDoubleClick = viewModel::onCardDoubleClick
-                )
-            }
+            StockAndWastePiles(
+                stockPile = viewModel.uiState.gameState.stock,
+                wastePile = viewModel.uiState.gameState.waste,
+                onStockClick = viewModel::onStockClick,
+                onWasteCardDoubleClick = viewModel::onCardDoubleClick,
+                cardAnimationState = viewModel.cardAnimationState
+            )
 
             // Foundation area (top-right)
             Row(
