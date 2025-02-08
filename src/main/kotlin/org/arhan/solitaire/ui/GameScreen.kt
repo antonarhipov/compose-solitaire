@@ -19,6 +19,8 @@ fun GameScreen(
 ) {
     val state = viewModel.gameState.collectAsState().value ?: return
     val selectedCard = viewModel.selectedCard.collectAsState().value
+    val draggedCard = viewModel.draggedCard
+    val dragSourcePile = viewModel.dragSourcePile
     val moveCount = viewModel.moveCount.collectAsState().value
     val gameTime = viewModel.gameTime.collectAsState().value
 
@@ -51,17 +53,29 @@ fun GameScreen(
             ) {
                 PileView(
                     pile = state.stock,
+                    gameState = state,
                     selectedCard = selectedCard,
+                    draggedCard = draggedCard,
+                    dragSourcePile = dragSourcePile,
                     onCardClick = viewModel::onCardClick,
                     onCardDoubleClick = viewModel::onCardDoubleClick,
-                    onPileClick = viewModel::onPileClick
+                    onPileClick = viewModel::onPileClick,
+                    onDragStart = viewModel::onDragStart,
+                    onDragEnd = viewModel::onDragEnd,
+                    onDrop = viewModel::onDrop
                 )
                 PileView(
                     pile = state.waste,
+                    gameState = state,
                     selectedCard = selectedCard,
+                    draggedCard = draggedCard,
+                    dragSourcePile = dragSourcePile,
                     onCardClick = viewModel::onCardClick,
                     onCardDoubleClick = viewModel::onCardDoubleClick,
-                    onPileClick = viewModel::onPileClick
+                    onPileClick = viewModel::onPileClick,
+                    onDragStart = viewModel::onDragStart,
+                    onDragEnd = viewModel::onDragEnd,
+                    onDrop = viewModel::onDrop
                 )
             }
 
@@ -73,10 +87,16 @@ fun GameScreen(
                 state.foundation.forEach { pile ->
                     PileView(
                         pile = pile,
+                        gameState = state,
                         selectedCard = selectedCard,
+                        draggedCard = draggedCard,
+                        dragSourcePile = dragSourcePile,
                         onCardClick = viewModel::onCardClick,
                         onCardDoubleClick = viewModel::onCardDoubleClick,
-                        onPileClick = viewModel::onPileClick
+                        onPileClick = viewModel::onPileClick,
+                        onDragStart = viewModel::onDragStart,
+                        onDragEnd = viewModel::onDragEnd,
+                        onDrop = viewModel::onDrop
                     )
                 }
             }
@@ -92,10 +112,16 @@ fun GameScreen(
             state.tableau.forEach { pile ->
                 PileView(
                     pile = pile,
+                    gameState = state,
                     selectedCard = selectedCard,
+                    draggedCard = draggedCard,
+                    dragSourcePile = dragSourcePile,
                     onCardClick = viewModel::onCardClick,
                     onCardDoubleClick = viewModel::onCardDoubleClick,
-                    onPileClick = viewModel::onPileClick
+                    onPileClick = viewModel::onPileClick,
+                    onDragStart = viewModel::onDragStart,
+                    onDragEnd = viewModel::onDragEnd,
+                    onDrop = viewModel::onDrop
                 )
             }
         }

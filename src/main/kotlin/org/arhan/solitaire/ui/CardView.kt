@@ -5,7 +5,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,13 +25,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.arhan.solitaire.model.Card
+import org.arhan.solitaire.model.Pile
 
 @Composable
 fun CardView(
     card: Card,
+    sourcePile: Pile,
     isSelected: Boolean,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
+    onDragStart: (Card, Pile) -> Unit,
+    onDragEnd: () -> Unit,
     modifier: Modifier = Modifier,
     allowFaceDownClick: Boolean = false
 ) {
@@ -49,6 +56,14 @@ fun CardView(
                 } else {
                     onClick()
                     lastClickTime = currentTime
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { if (card.faceUp || allowFaceDownClick) onDragStart(card, sourcePile) },
+                    onDragEnd = { onDragEnd() }
+                ) { change, _ ->
+                    change.consume()
                 }
             },
         color = if (card.faceUp) Color.White else Color.Blue.copy(alpha = 0.8f),

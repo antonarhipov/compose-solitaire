@@ -7,6 +7,9 @@ import org.arhan.solitaire.game.GameLogic
 import org.arhan.solitaire.model.Card
 import org.arhan.solitaire.model.GameState
 import org.arhan.solitaire.model.Pile
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -25,6 +28,38 @@ class GameViewModel {
 
     private val _isGameStarted = MutableStateFlow(false)
     val isGameStarted: StateFlow<Boolean> = _isGameStarted.asStateFlow()
+
+    // Drag and drop state
+    private var _draggedCard by mutableStateOf<Card?>(null)
+    val draggedCard: Card? get() = _draggedCard
+
+    private var _dragSourcePile by mutableStateOf<Pile?>(null)
+    val dragSourcePile: Pile? get() = _dragSourcePile
+
+    fun onDragStart(card: Card, sourcePile: Pile) {
+        _draggedCard = card
+        _dragSourcePile = sourcePile
+    }
+
+    fun onDragEnd() {
+        _draggedCard = null
+        _dragSourcePile = null
+    }
+
+    fun onDrop(targetPile: Pile) {
+        val currentState = _gameState.value ?: return
+        val draggedCard = _draggedCard ?: return
+        val sourcePile = _dragSourcePile ?: return
+
+        // Find valid move
+        val validMove = GameLogic.findValidMove(currentState, draggedCard)
+        if (validMove != null && validMove.second == targetPile) {
+            executeMove(validMove)
+        }
+
+        // Reset drag state
+        onDragEnd()
+    }
 
     fun startNewGame() {
         _gameState.value = createInitialGameState()
