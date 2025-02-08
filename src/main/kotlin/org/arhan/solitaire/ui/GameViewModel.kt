@@ -1,165 +1,252 @@
 package org.arhan.solitaire.ui
 
-import androidx.compose.runtime.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.arhan.solitaire.game.GameLogic
 import org.arhan.solitaire.model.Card
 import org.arhan.solitaire.model.GameState
+import org.arhan.solitaire.model.Pile
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class GameViewModel {
-    private var timerJob: Job? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val _gameState = MutableStateFlow<GameState?>(null)
+    val gameState: StateFlow<GameState?> = _gameState.asStateFlow()
 
-    var uiState by mutableStateOf(GameUiState(GameState.createInitialState()))
-        private set
+    private val _selectedCard = MutableStateFlow<Card?>(null)
+    val selectedCard: StateFlow<Card?> = _selectedCard.asStateFlow()
 
-    var cardAnimationState by mutableStateOf<CardAnimationState?>(null)
-        private set
+    private val _moveCount = MutableStateFlow(0)
+    val moveCount: StateFlow<Int> = _moveCount.asStateFlow()
 
-    init {
-        startTimer()
+    private val _gameTime = MutableStateFlow(0.seconds)
+    val gameTime: StateFlow<Duration> = _gameTime.asStateFlow()
+
+    private val _isGameStarted = MutableStateFlow(false)
+    val isGameStarted: StateFlow<Boolean> = _isGameStarted.asStateFlow()
+
+    fun startNewGame() {
+        _gameState.value = createInitialGameState()
+        _moveCount.value = 0
+        _gameTime.value = 0.seconds
+        _isGameStarted.value = false
+        _selectedCard.value = null
     }
 
-    private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = coroutineScope.launch {
-            while (isActive) {
-                if (uiState.isTimerRunning) {
-                    delay(1000)
-                    uiState = uiState.updateTimer(uiState.elapsedTime + 1.seconds)
-                } else {
-                    delay(100)
-                }
+    fun onCardClick(card: Card) {
+        if (!_isGameStarted.value) {
+            _isGameStarted.value = true
+        }
+
+        val currentState = _gameState.value ?: return
+
+        // Handle stock pile card clicks
+        if (currentState.stock.cards.contains(card)) {
+            if (currentState.stock.isEmpty) {
+                val cycleResult = GameLogic.cycleWasteToStock(currentState)
+                _gameState.value = currentState.copy(
+                    stock = cycleResult.newStock,
+                    waste = cycleResult.newWaste
+                )
+            } else {
+                // Get the top card from stock
+                val drawnCard = currentState.stock.cards.last()
+                
+                // Remove it from stock and add it to waste pile with faceUp = true
+                _gameState.value = currentState.copy(
+                    stock = currentState.stock.removeCard(drawnCard),
+                    waste = currentState.waste.addCard(drawnCard.copy(faceUp = true))
+                )
+            }
+            _moveCount.value += 1
+            return
+        }
+
+        val currentSelected = _selectedCard.value
+
+        if (currentSelected == null) {
+            if (card.faceUp) {
+                _selectedCard.value = card
+            }
+        } else {
+            if (currentSelected == card) {
+                _selectedCard.value = null
+            } else {
+                tryMove(currentState, currentSelected, card)
             }
         }
     }
 
     fun onCardDoubleClick(card: Card) {
-        val currentState = uiState.gameState
-        val sourcePile = currentState.findPileWithCard(card) ?: return
+        if (!_isGameStarted.value) {
+            _isGameStarted.value = true
+        }
 
-        // Try foundation move first
-        for (foundation in currentState.foundation) {
-            GameLogic.findValidMove(currentState, card)?.let { (from, to, moveCard) ->
-                if (to.type == org.arhan.solitaire.model.Pile.Type.FOUNDATION) {
-                    makeMove(from, to, moveCard)
-                    return
-                }
+        val currentState = _gameState.value ?: return
+
+        // Handle stock pile card double-clicks the same as single clicks
+        if (currentState.stock.cards.contains(card)) {
+            onCardClick(card)
+            return
+        }
+
+        if (!card.faceUp) return
+        
+        // First try foundation move
+        findBestMove(currentState, card)?.let { move ->
+            executeMove(move)
+            return
+        }
+    }
+
+    private fun findBestMove(gameState: GameState, card: Card): Triple<Pile, Pile, Card>? {
+        // First try foundation moves (higher priority)
+        GameLogic.findValidMove(gameState, card)?.let { move ->
+            if (move.second.type == Pile.Type.FOUNDATION) {
+                return move
             }
         }
 
         // Then try tableau moves
-        GameLogic.findValidMove(currentState, card)?.let { (from, to, moveCard) ->
-            makeMove(from, to, moveCard)
+        return GameLogic.findValidMove(gameState, card)?.let { move ->
+            if (move.second.type == Pile.Type.TABLEAU) {
+                move
+            } else {
+                null
+            }
         }
     }
 
-    private fun makeMove(from: org.arhan.solitaire.model.Pile, to: org.arhan.solitaire.model.Pile, card: Card) {
-        val oldState = uiState.gameState
+    fun onPileClick(pile: Pile) {
+        if (!_isGameStarted.value) {
+            _isGameStarted.value = true
+        }
 
-        // Get all cards to move (the card and any cards on top of it)
-        val cardIndex = from.cards.indexOf(card)
-        if (cardIndex == -1) return
-        val cardsToMove = from.cards.subList(cardIndex, from.cards.size)
+        val currentState = _gameState.value ?: return
+        val currentSelected = _selectedCard.value
 
-        // Remove cards from source pile
-        val (_, newFromPile) = from.removeCards(cardsToMove.size)
+        when {
+            currentSelected != null -> {
+                val validMove = GameLogic.findValidMove(currentState, currentSelected)
+                if (validMove != null && validMove.second == pile) {
+                    executeMove(validMove)
+                }
+                _selectedCard.value = null
+            }
+            pile.type == Pile.Type.STOCK -> {
+                if (pile.isEmpty) {
+                    val cycleResult = GameLogic.cycleWasteToStock(currentState)
+                    _gameState.value = currentState.copy(
+                        stock = cycleResult.newStock,
+                        waste = cycleResult.newWaste
+                    )
+                } else {
+                    // Get the top card from stock
+                    val drawnCard = currentState.stock.cards.last()
+                    
+                    // Remove it from stock and add it to waste pile with faceUp = true
+                    _gameState.value = currentState.copy(
+                        stock = currentState.stock.removeCard(drawnCard),
+                        waste = currentState.waste.addCard(drawnCard.copy(faceUp = true))
+                    )
+                }
+                _moveCount.value += 1
+            }
+            pile.type == Pile.Type.TABLEAU && pile.isEmpty && currentSelected == null -> {
+                // Handle empty tableau click when no card is selected
+                // This is where you might want to handle dragging a King to an empty spot
+            }
+        }
+    }
 
-        // Add cards to target pile
-        val newToPile = to.addCards(cardsToMove)
+    private fun tryMove(currentState: GameState, selectedCard: Card, targetCard: Card) {
+        val validMove = GameLogic.findValidMove(currentState, selectedCard)
+        if (validMove != null && validMove.second.cards.contains(targetCard)) {
+            executeMove(validMove)
+        }
+        _selectedCard.value = null
+    }
 
-        // If source is tableau pile and has a face-down top card after move, flip it
-        var finalFromPile = newFromPile
-        if (from.type == org.arhan.solitaire.model.Pile.Type.TABLEAU) {
-            newFromPile.topCard?.let { topCard ->
-                if (!topCard.faceUp) {
-                    finalFromPile = newFromPile.removeTopCard().second
-                        .addCard(topCard.copy(faceUp = true))
+    private fun executeMove(move: Triple<Pile, Pile, Card>) {
+        val currentState = _gameState.value ?: return
+        val (sourcePile, targetPile, card) = move
+
+        val sourceIndex = when (sourcePile.type) {
+            Pile.Type.TABLEAU -> currentState.tableau.indexOf(sourcePile)
+            Pile.Type.WASTE -> -1
+            else -> return
+        }
+
+        val targetIndex = when (targetPile.type) {
+            Pile.Type.TABLEAU -> currentState.tableau.indexOf(targetPile)
+            Pile.Type.FOUNDATION -> currentState.foundation.indexOf(targetPile)
+            else -> return
+        }
+
+        val cardIndex = sourcePile.cards.indexOf(card)
+        val cardsToMove = sourcePile.cards.subList(cardIndex, sourcePile.cards.size)
+
+        val newSourcePile = sourcePile.removeCards(cardsToMove)
+            .let { pile ->
+                if (pile.cards.isNotEmpty() && !pile.cards.last().faceUp) {
+                    pile.copy(cards = pile.cards.dropLast(1) + pile.cards.last().copy(faceUp = true))
+                } else {
+                    pile
                 }
             }
-        }
 
-        // Update game state
-        val newState = oldState
-            .updatePile(from, finalFromPile)
-            .updatePile(to, newToPile)
+        val newTargetPile = targetPile.addCards(cardsToMove)
 
-        uiState = uiState
-            .addToUndoStack(oldState)
-            .copy(gameState = newState)
-            .incrementMoves()
+        _gameState.value = currentState.copy(
+            tableau = currentState.tableau.mapIndexed { index, pile ->
+                when (index) {
+                    sourceIndex -> newSourcePile
+                    targetIndex -> if (targetPile.type == Pile.Type.TABLEAU) newTargetPile else pile
+                    else -> pile
+                }
+            },
+            foundation = currentState.foundation.mapIndexed { index, pile ->
+                if (targetPile.type == Pile.Type.FOUNDATION && index == targetIndex) newTargetPile else pile
+            },
+            waste = if (sourcePile.type == Pile.Type.WASTE) newSourcePile else currentState.waste
+        )
+
+        _moveCount.value += 1
     }
 
-    fun undo() {
-        uiState.undo()?.let { newState ->
-            uiState = newState
-        }
+    private fun createInitialGameState(): GameState {
+        val deck = createShuffledDeck()
+        val tableau = createTableau(deck.take(28))
+        val stock = Pile(Pile.Type.STOCK, deck.drop(28).map { it.copy(faceUp = false) })
+        val foundation = List(4) { Pile(Pile.Type.FOUNDATION) }
+        val waste = Pile(Pile.Type.WASTE)
+
+        return GameState(tableau, foundation, stock, waste)
     }
 
-    fun onStockClick(stockPosition: androidx.compose.ui.geometry.Offset, wastePosition: androidx.compose.ui.geometry.Offset) {
-        if (cardAnimationState?.isAnimating == true) return
-
-        val oldState = uiState.gameState
-        val stock = oldState.stock
-        val waste = oldState.waste
-
-        if (stock.isEmpty && !waste.isEmpty) {
-            // If stock is empty and waste has cards, animate recycling
-            val topCard = waste.topCard!!
-            cardAnimationState = CardAnimationState().apply {
-                startAnimation(topCard.copy(faceUp = false), stockPosition)
+    private fun createShuffledDeck(): List<Card> {
+        return Card.Suit.values().flatMap { suit ->
+            Card.Rank.values().map { rank ->
+                Card(suit, rank, false)
             }
-            coroutineScope.launch {
-                delay(750) // Wait for flip and movement animations
-                uiState = uiState
-                    .addToUndoStack(oldState)
-                    .copy(gameState = GameLogic.cycleWasteToStock(oldState))
-                    .incrementMoves()
-                cardAnimationState = null
+        }.shuffled()
+    }
+
+    private fun createTableau(cards: List<Card>): List<Pile> {
+        var remainingCards = cards
+        return List(7) { column ->
+            val pileCards = remainingCards.take(column + 1).mapIndexed { index, card ->
+                if (index == column) card.copy(faceUp = true) else card
             }
-            return
-        }
-
-        // Draw one card from stock to waste
-        drawFromStock(stockPosition, wastePosition)
-    }
-
-    private fun drawFromStock(stockPosition: androidx.compose.ui.geometry.Offset, wastePosition: androidx.compose.ui.geometry.Offset) {
-        val oldState = uiState.gameState
-        val stock = oldState.stock
-        val waste = oldState.waste
-
-        // Draw top card from stock and animate it
-        val (card, newStock) = stock.removeTopCard()
-
-        // Start with the card face down, it will flip during animation
-        cardAnimationState = CardAnimationState().apply {
-            startAnimation(card.copy(faceUp = false), wastePosition)
-        }
-
-        // Update the game state immediately to remove the card from stock
-        uiState = uiState
-            .addToUndoStack(oldState)
-            .copy(gameState = oldState.updatePile(stock, newStock))
-
-        coroutineScope.launch {
-            delay(750) // Wait for flip and movement animations
-            // Add the card face up to waste pile
-            val newWaste = waste.addCard(card.copy(faceUp = true))
-            uiState = uiState.copy(
-                gameState = uiState.gameState.updatePile(waste, newWaste)
-            ).incrementMoves()
-            cardAnimationState = null
+            remainingCards = remainingCards.drop(column + 1)
+            Pile(Pile.Type.TABLEAU, pileCards)
         }
     }
 
-    fun newGame() {
-        uiState = GameUiState(GameState.createInitialState())
-    }
-
-    fun onDestroy() {
-        timerJob?.cancel()
-        coroutineScope.cancel()
+    fun updateGameTime(duration: Duration) {
+        if (_isGameStarted.value) {
+            _gameTime.value = duration
+        }
     }
 }
