@@ -14,10 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.arhan.solitaire.model.Card
 
@@ -54,13 +56,38 @@ fun CardView(
     ) {
         if (card.faceUp) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(8.dp),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxSize().padding(4.dp)
             ) {
+                // Top-left corner
                 Text(
                     text = "${getCardDisplayValue(card)}${getSuitSymbol(card.suit)}",
                     color = if (card.isRed) Color.Red else Color.Black,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                )
+
+                // Center
+                Text(
+                    text = "${getCardDisplayValue(card)}${getSuitSymbol(card.suit)}",
+                    color = if (card.isRed) Color.Red else Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+
+                // Bottom-right corner (rotated 180 degrees)
+                Text(
+                    text = "${getCardDisplayValue(card)}${getSuitSymbol(card.suit)}",
+                    color = if (card.isRed) Color.Red else Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .rotate(180f)
                 )
             }
         }
