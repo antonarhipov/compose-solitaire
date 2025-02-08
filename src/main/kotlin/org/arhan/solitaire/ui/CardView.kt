@@ -27,7 +27,8 @@ fun CardView(
     isSelected: Boolean,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    allowFaceDownClick: Boolean = false
 ) {
     val scale by animateFloatAsState(if (isSelected) 1.05f else 1f)
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -38,7 +39,7 @@ fun CardView(
             .size(80.dp, 120.dp)
             .clip(RoundedCornerShape(8.dp))
             .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray, RoundedCornerShape(8.dp))
-            .clickable(enabled = card.faceUp) {
+            .clickable(enabled = card.faceUp || allowFaceDownClick) {
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastClickTime < 300) { // 300ms threshold for double-click
                     onDoubleClick()

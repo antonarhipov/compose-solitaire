@@ -41,25 +41,9 @@ class GameViewModel {
 
         val currentState = _gameState.value ?: return
 
-        // Handle stock pile card clicks
+        // Redirect stock pile card clicks to onPileClick
         if (currentState.stock.cards.contains(card)) {
-            if (currentState.stock.isEmpty) {
-                val cycleResult = GameLogic.cycleWasteToStock(currentState)
-                _gameState.value = currentState.copy(
-                    stock = cycleResult.newStock,
-                    waste = cycleResult.newWaste
-                )
-            } else {
-                // Get the top card from stock
-                val drawnCard = currentState.stock.cards.last()
-                
-                // Remove it from stock and add it to waste pile with faceUp = true
-                _gameState.value = currentState.copy(
-                    stock = currentState.stock.removeCard(drawnCard),
-                    waste = currentState.waste.addCard(drawnCard.copy(faceUp = true))
-                )
-            }
-            _moveCount.value += 1
+            onPileClick(currentState.stock)
             return
         }
 
@@ -92,7 +76,7 @@ class GameViewModel {
         }
 
         if (!card.faceUp) return
-        
+
         // First try foundation move
         findBestMove(currentState, card)?.let { move ->
             executeMove(move)
@@ -136,19 +120,28 @@ class GameViewModel {
             }
             pile.type == Pile.Type.STOCK -> {
                 if (pile.isEmpty) {
+                    // When stock is empty, move all cards from waste back to stock face down
                     val cycleResult = GameLogic.cycleWasteToStock(currentState)
                     _gameState.value = currentState.copy(
-                        stock = cycleResult.newStock,
+                        stock = cycleResult.newStock.copy(cards = cycleResult.newStock.cards.map { it.copy(faceUp = false) }),
                         waste = cycleResult.newWaste
                     )
                 } else {
-                    // Get the top card from stock
+                    // Get the top card from stock (keeping it face down)
                     val drawnCard = currentState.stock.cards.last()
-                    
-                    // Remove it from stock and add it to waste pile with faceUp = true
-                    _gameState.value = currentState.copy(
+
+                    // First move: Remove card from stock and add to waste (still face down)
+                    val intermediateState = currentState.copy(
                         stock = currentState.stock.removeCard(drawnCard),
-                        waste = currentState.waste.addCard(drawnCard.copy(faceUp = true))
+                        waste = currentState.waste.addCard(drawnCard)
+                    )
+
+                    // Second move: Turn the card face up in waste pile
+                    _gameState.value = intermediateState.copy(
+                        waste = intermediateState.waste.copy(
+                            cards = intermediateState.waste.cards.dropLast(1) + 
+                                   intermediateState.waste.cards.last().copy(faceUp = true)
+                        )
                     )
                 }
                 _moveCount.value += 1

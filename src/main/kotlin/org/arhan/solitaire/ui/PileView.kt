@@ -95,7 +95,8 @@ private fun StockPileView(
                 card = topCard.copy(faceUp = false),
                 isSelected = false,
                 onClick = { onCardClick(topCard) },
-                onDoubleClick = { onCardDoubleClick(topCard) }
+                onDoubleClick = { onCardDoubleClick(topCard) },
+                allowFaceDownClick = true
             )
         }
     }
