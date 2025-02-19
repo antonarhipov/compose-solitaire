@@ -8,6 +8,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import org.arhan.solitaire.model.Card
 import org.arhan.solitaire.model.Pile
 import kotlin.time.Duration
@@ -24,10 +27,25 @@ fun GameScreen(
     val moveCount = viewModel.moveCount.collectAsState().value
     val gameTime = viewModel.gameTime.collectAsState().value
 
+    val backgroundGradient = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF1B5E20), // Dark green
+            Color(0xFF2E7D32), // Forest green
+            Color(0xFF388E3C), // Medium green
+            Color(0xFF2E7D32), // Forest green
+            Color(0xFF388E3C), // Medium green
+            Color(0xFF2E7D32), // Forest green
+            Color(0xFF1B5E20)  // Dark green
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(1200f, 1200f)
+    )
+
     Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = modifier
+            .fillMaxSize()
+            .background(brush = backgroundGradient)
+            .padding(16.dp)
     ) {
         // Game stats and controls
         Row(

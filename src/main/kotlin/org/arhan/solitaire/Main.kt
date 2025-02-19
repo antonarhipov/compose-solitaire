@@ -31,7 +31,7 @@ fun main() = application {
             color = MaterialTheme.colorScheme.background
         ) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 GameScreen(

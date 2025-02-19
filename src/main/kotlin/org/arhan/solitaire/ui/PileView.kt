@@ -172,7 +172,7 @@ private fun TableauPileView(
     Column(
         modifier = Modifier.width(80.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy((-80).dp)
+        verticalArrangement = Arrangement.spacedBy((-100).dp)
     ) {
         pile.cards.forEach { card ->
             CardView(

@@ -1,210 +1,106 @@
 # Compose Solitaire
 
-A modern implementation of the classic Klondike Solitaire card game using Jetpack Compose for Desktop.
+## Project Overview
+Compose Solitaire is a modern implementation of the classic Solitaire card game using Jetpack Compose for Desktop. This project demonstrates how to build a desktop application using Kotlin and Compose Desktop framework.
 
-## Table of Contents
-- [Game Rules](#game-rules)
-- [UI Implementation](#ui-implementation)
-- [Technical Architecture](#technical-architecture)
-- [Testing Strategy](#testing-strategy)
-- [Development Guidelines](#development-guidelines)
+![](screenshots/solitaire.png)
 
-## Game Rules
+## Technology Stack
+- **Language**: Kotlin
+- **UI Framework**: [Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/)
 
-### Setup
-- Standard 52-card deck (no Jokers)
-- 7 tableau columns with cards dealt as follows:
-  - Column 1: 1 card (face up)
-  - Column 2: 2 cards (1 face up)
-  - Column 3: 3 cards (1 face up)
-  - Column 4: 4 cards (1 face up)
-  - Column 5: 5 cards (1 face up)
-  - Column 6: 6 cards (1 face up)
-  - Column 7: 7 cards (1 face up)
-- Remaining cards form the stock pile
+## Project Structure
+```
+compose-solitaire/
+├── .junie/          # Project guidelines and documentation
+├── .idea/           # IntelliJ IDEA configuration files
+├── gradle/          # Gradle wrapper files
+├── src/
+│   └── main/
+│       └── kotlin/  # Kotlin source files
+├── build.gradle.kts # Gradle build configuration
+├── settings.gradle.kts # Gradle settings
+└── gradle.properties # Gradle properties
+```
 
-### Game Areas
-1. **Tableau** (7 columns)
-   - Cards must be stacked in descending order
-   - Alternating colors (red/black)
+## Setup Instructions
+1. **Prerequisites**:
+   - JDK 11 or later
+   - IntelliJ IDEA (recommended) or another IDE with Kotlin support
+
+2. **Building the Project**:
+   - Clone the repository
+   - Open the project in IntelliJ IDEA
+   - Let Gradle sync and download dependencies
+   - Run the project using the 'desktop' run configuration
+
+3. **Development**:
+   - Main application entry point is in `src/main/kotlin/Main.kt`
+   - The project uses Compose Desktop for UI components
+   - Gradle is configured with Kotlin DSL for better IDE support
+
+## Game Rules and Implementation Details
+
+### Game Overview
+Klondike Solitaire is a classic single-player card game where the objective is to sort all cards into foundation piles by suit and rank, from Ace to King.
+
+### Game Components
+1. **Standard Deck**: 52 cards (no Jokers)
+2. **Game Areas**:
+   - Tableau: 7 columns of cards
+   - Stock Pile: Remaining deck face down
+   - Waste Pile: Drawn cards face up
+   - Foundation Piles: 4 piles for building up suits
+
+### Initial Setup
+- **Tableau**: 7 columns dealt as follows:
+  - Column 1: 1 card face up
+  - Column 2: 2 cards (1 face up, 1 face down)
+  - Column 3: 3 cards (1 face up, 2 face down)
+  - Column 4: 4 cards (1 face up, 3 face down)
+  - Column 5: 5 cards (1 face up, 4 face down)
+  - Column 6: 6 cards (1 face up, 5 face down)
+  - Column 7: 7 cards (1 face up, 6 face down)
+- **Stock Pile**: Remaining 24 cards face down
+
+### Game Rules
+1. **Foundation Building**:
+   - Start with Aces
+   - Build up by suit (♠️, ♥️, ♣️, ♦️)
+   - Sequence: A → 2 → 3 → ... → K
+
+2. **Tableau Rules**:
+   - Build down in alternating colors
+   - Move single cards or groups of cards
    - Empty columns can only be filled with Kings
-   - Multiple cards can be moved if in sequence
+   - Automatically flip face-down cards when exposed
 
-2. **Foundation** (4 piles)
-   - Built up by suit from Ace to King
-   - Cards can only be placed in ascending order
-   - Each foundation represents one suit
-   - Completion of all foundations is the win condition
-
-3. **Stock Pile**
-   - Remaining cards after initial deal
-   - Cards can be drawn to waste pile
-   - Can be recycled when empty
-
-4. **Waste Pile**
-   - Cards drawn from stock
-   - Only top card is playable
-   - Cards can be moved to tableau or foundation
-
-### Game Mechanics
-1. **Basic Moves**
+3. **Stock and Waste Pile**:
    - Draw cards from stock to waste
-   - Move cards between tableau columns
-   - Build foundation piles by suit
-   - Move single cards or sequences
+   - Only top waste card is playable
+   - Recycle waste pile when stock is empty
 
-2. **Special Rules**
-   - Double-click auto-moves cards to foundation
-   - Foundation piles have placement priority
-   - Revealed face-down cards are automatically flipped
-   - Empty columns can only receive Kings
+### Special Features
+1. **Double-Click Automation**:
+   - Double-clicking a card automatically moves it to the first valid position
+   - Foundation placement takes priority over tableau moves
 
-## UI Implementation
+2. **Game Statistics**:
+   - Move counter tracks the number of moves
+   - Timer shows elapsed game time
 
-### Layout Structure
-1. **Top Section**
-   - Stock and waste piles (left)
-   - Foundation piles (right)
-   - Score and timer display
-   - Menu buttons
+### Winning Condition
+The game is won when all cards are moved to the foundation piles in proper sequence (Ace to King) by suit.
 
-2. **Main Game Area**
-   - 7 tableau columns
-   - Visual card overlapping
-   - Clear spacing between columns
-   - Empty column indicators
+### Implementation Details
+- Built using Jetpack Compose for Desktop
+- Implements drag-and-drop functionality for card movement
+- Features smooth animations for card movements
+- Includes undo/redo functionality
+- Saves game state for resume capability
 
-3. **Status Bar**
-   - Move counter
-   - Timer
-   - Game status
-   - Menu options
-
-### User Interactions
-1. **Drag and Drop**
-   - Smooth card movement
-   - Visual feedback for valid moves
-   - Drop zone highlighting
-   - Invalid move indication
-
-2. **Double-Click Actions**
-   - Auto-move to foundation
-   - Smart card placement
-   - Visual feedback
-   - Animation sequences
-
-3. **Touch and Mouse Support**
-   - Multi-platform input handling
-   - Touch gesture support
-   - Mouse hover effects
-   - Click/tap feedback
-
-### Visual Elements
-1. **Card Design**
-   - Clear suit and rank display
-   - Face-up/down states
-   - Selection highlighting
-   - Drag preview
-
-2. **Animations**
-   - Card flip effects
-   - Movement transitions
-   - Deal animation
-   - Win celebration
-
-3. **Feedback Systems**
-   - Valid move highlights
-   - Error indicators
-   - Progress feedback
-   - Score updates
-
-## Technical Architecture
-
-### Core Components
-1. **Data Models**
-   - Card
-   - Deck
-   - Pile
-   - GameState
-   - Move
-
-2. **State Management**
-   - Immutable state classes
-   - Event handling
-   - Undo/redo system
-   - Save/load functionality
-
-3. **UI Components**
-   - Card renderer
-   - Pile layout
-   - Drag-drop system
-   - Animation controller
-
-### Technology Stack
-- Kotlin
-- Jetpack Compose for Desktop
-- Material 3 Design
-- Coroutines for async operations
-
-## Testing Strategy
-
-### Unit Tests
-1. **Game Logic**
-   - Card operations
-   - Move validation
-   - Game state transitions
-   - Win condition checking
-
-2. **Model Tests**
-   - Card properties
-   - Deck operations
-   - Pile management
-   - State mutations
-
-### UI Tests
-1. **Component Testing**
-   - Layout verification
-   - Interaction handling
-   - Animation behavior
-   - State updates
-
-2. **Integration Tests**
-   - Complete game flows
-   - User interactions
-   - State persistence
-   - Performance metrics
-
-### Property-Based Tests
-- Move validation rules
-- Game state consistency
-- Card sequence validation
-- Edge case handling
-
-## Development Guidelines
-
-### Code Organization
-- Clear package structure
-- Separation of concerns
-- Comprehensive documentation
-- Consistent naming conventions
-
-### Performance Considerations
-- Efficient recomposition
-- Resource optimization
-- Animation performance
-- Memory management
-
-### Quality Assurance
-- Comprehensive test coverage
-- Regular performance profiling
-- Accessibility compliance
-- Cross-platform testing
-
-## Getting Started
-1. Clone the repository
-2. Open in IntelliJ IDEA
-3. Build with Gradle
-4. Run the desktop application
-
-## License
-[MIT License](LICENSE)
+## Additional Notes
+- The game includes visual and audio feedback for moves
+- Auto-save feature preserves game progress
+- High scores and statistics are locally stored
+- Supports keyboard shortcuts for common actions

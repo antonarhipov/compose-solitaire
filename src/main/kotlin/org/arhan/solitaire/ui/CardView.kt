@@ -1,29 +1,34 @@
 package org.arhan.solitaire.ui
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import org.arhan.solitaire.model.Card
 import org.arhan.solitaire.model.Pile
 
@@ -41,6 +46,19 @@ fun CardView(
 ) {
     val scale by animateFloatAsState(if (isSelected) 1.05f else 1f)
     var lastClickTime by remember { mutableStateOf(0L) }
+
+    val cardBack = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFFFFFFFF), // Pure white
+            Color(0xFFF5F5F5), // Almost white
+            Color(0xFFE0E0E0), // Light grey
+            Color(0xFFBDBDBD), // Medium light grey
+            Color(0xFFE0E0E0), // Light grey
+            Color(0xFFF5F5F5), // Almost white
+            Color(0xFFFFFFFF)  // Pure white
+        )
+    )
+
 
     Surface(
         modifier = modifier
@@ -125,8 +143,9 @@ fun EmptyCardSlot(
     Surface(
         modifier = modifier
             .size(80.dp, 120.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(5.dp))
+            .background(Color.Gray.copy(alpha = 0.3f))
+            .border(1.dp, Color.Gray.copy(alpha = 0.9f), RoundedCornerShape(5.dp))
             .clickable(onClick = onClick),
         color = Color.Gray.copy(alpha = 0.1f)
     ) {
